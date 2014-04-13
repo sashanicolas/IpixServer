@@ -1,4 +1,6 @@
-package com.example.ipixserver;
+package br.com.obatag.ipix.server;
+
+import com.example.ipixserver.R;
 
 import android.app.Activity;
 import android.app.ActionBar;
