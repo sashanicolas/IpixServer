@@ -1,6 +1,7 @@
 package br.com.obatag.ipix.server;
 
 import java.io.BufferedOutputStream;
+import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.IOException;
@@ -14,6 +15,7 @@ import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 import android.os.Bundle;
 import android.os.Handler;
+import android.util.Log;
 import android.widget.ImageView;
 import android.widget.Toast;
 
@@ -25,6 +27,7 @@ public class ServerMainActivity extends Activity {
 	public static final int SERVERPORT = 6000;
 	Thread serverThread = null;
 	Handler toastHandler;
+	Socket socket = null;
 
 	@Override
 	protected void onCreate(Bundle savedInstanceState) {
@@ -57,7 +60,6 @@ public class ServerMainActivity extends Activity {
 	class ServerThread implements Runnable {
 
 		public void run() {
-			Socket socket = null;
 			try {
 				serverSocket = new ServerSocket(SERVERPORT);
 			} catch (IOException e) {
@@ -67,7 +69,7 @@ public class ServerMainActivity extends Activity {
 				try {
 					socket = serverSocket.accept();
 
-					String msg = "Conectou";
+					String msg = "Conectado";
 					toastHandler.post(new ShowToast(msg));
 					
 					fileReceived(socket.getInputStream());
@@ -95,24 +97,41 @@ public class ServerMainActivity extends Activity {
 
 	public void fileReceived(InputStream is) throws FileNotFoundException,
 			IOException {
-
+		
+		int bufferSize = 0;
 		if (is != null) {
 			FileOutputStream fos = null;
 			BufferedOutputStream bos = null;
 			try {
-				fos = new FileOutputStream("/storage/emulated/0/Pictures/imagem.jpg");
-				bos = new BufferedOutputStream(fos);
-				byte[] aByte = new byte[100000];
-				int bytesRead;
-
-				while ((bytesRead = is.read(aByte)) != -1) {
-					bos.write(aByte, 0, bytesRead);
+				bufferSize = socket.getReceiveBufferSize();
+				
+				File f = new File("/storage/Pictures/imagem.jpg");
+				f.mkdirs(); 
+				f.createNewFile();
+				
+				if (!f.exists()) {
+					Log.w("myApp", "Arquivo nao encotrado");
+					return;
 				}
+				
+				fos = new FileOutputStream(f);
+				bos = new BufferedOutputStream(fos);
+				
+				byte[] bytes = new byte[bufferSize];
+				int count;
+				
+				while ((count = is.read(bytes)) > 0) {
+					bos.write(bytes, 0, count);
+				}
+				
 				bos.flush();
 				bos.close();
+				is.close();
+				socket.close();
+				serverSocket.close();
 
 			} catch (IOException ex) {
-				// Do exception handling
+				
 			}
 		}
 	}
